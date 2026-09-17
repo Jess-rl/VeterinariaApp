@@ -17,21 +17,27 @@ partial class Form1
         {
             components.Dispose();
         }
+
         base.Dispose(disposing);
     }
 
     #region Windows Form Designer generated code
 
     /// <summary>
-    ///  Required method for Designer support - do not modify
-    ///  the contents of this method with the code editor.
+    /// Required method for Designer support - do not modify
+    /// the contents of this method with the code editor.
     /// </summary>
     private void InitializeComponent()
     {
-        components = new System.ComponentModel.Container();
-        AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(800, 450);
+        SuspendLayout();
+        // 
+        // Form1
+        // 
+        AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+        AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+        ClientSize = new System.Drawing.Size(807, 511);
         Text = "Form1";
+        ResumeLayout(false);
     }
 
     #endregion

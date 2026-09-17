@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Veterinaria.UI", "Veterinaria.UI\Veterinaria.UI.csproj", "{DA84F2BA-E1BB-4A67-A930-C839F2630BB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Veterinaria.Entidades", "Veterinaria.Entidades\Veterinaria.Entidades.csproj", "{50FC9FD7-ADAD-4206-8791-5F402CB13029}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{DA84F2BA-E1BB-4A67-A930-C839F2630BB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA84F2BA-E1BB-4A67-A930-C839F2630BB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DA84F2BA-E1BB-4A67-A930-C839F2630BB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50FC9FD7-ADAD-4206-8791-5F402CB13029}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50FC9FD7-ADAD-4206-8791-5F402CB13029}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50FC9FD7-ADAD-4206-8791-5F402CB13029}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50FC9FD7-ADAD-4206-8791-5F402CB13029}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
