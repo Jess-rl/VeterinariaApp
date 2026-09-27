@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWindowsForms>true</UseWindowsForms>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Veterinaria.U</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Veterinaria.Entidades\Veterinaria.Entidades.csproj" />
+      <ProjectReference Include="..\Veterinaria.Negocio\Veterinaria.Negocio.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="FormRecepcion.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="FormVeterinario.cs">
+        <SubType>Form</SubType>
+      </Compile>
+      <Compile Update="FormPin.cs">
+        <SubType>Form</SubType>
+      </Compile>
+    </ItemGroup>
+
+</Project>
