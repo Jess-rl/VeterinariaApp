@@ -1,4 +1,4 @@
-namespace Veterinaria.U;
+namespace Veterinaria.UI;
 
 static class Program
 {

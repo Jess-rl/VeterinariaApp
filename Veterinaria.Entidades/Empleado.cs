@@ -3,8 +3,19 @@ namespace Veterinaria.Entidades;
 public class Empleado
 {
     public int IdEmpleado { get; set; }
-    public String Nombre { get; set; } = String.Empty;
-    public String Rol { get; set; } = String.Empty;
-    public String clavePin { get; set; } = String.Empty;
+    public string Nombre { get; set; } = string.Empty;
+    public string Rol { get; set; } = string.Empty;
+    public string ClavePin { get; set; } = string.Empty;
 
+    public Empleado()
+    {
+    }
+
+    public Empleado(int idEmpleado, string nombre, string rol, string clavePin)
+    {
+        IdEmpleado = idEmpleado;
+        Nombre = nombre;
+        Rol = rol;
+        ClavePin = clavePin;
+    }
 }

@@ -1,7 +1,8 @@
-﻿using Npgsql;
+using Npgsql;
+
 namespace Veterinaria.Datos;
 
-public class ConexionBD
+public static class ConexionBD
 {
     private const string Conexion = "Host=localhost;" +
                                     "Port=5432;Database=db_veterinaria;" +
@@ -10,11 +11,8 @@ public class ConexionBD
 
     public static NpgsqlConnection ObtenerConexion()
     {
-        NpgsqlConnection conexion = new NpgsqlConnection(Conexion);
+        var conexion = new NpgsqlConnection(Conexion);
         conexion.Open();
         return conexion;
     }
-    
 }
-
-

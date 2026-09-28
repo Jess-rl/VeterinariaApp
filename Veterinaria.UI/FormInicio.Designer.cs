@@ -1,4 +1,4 @@
-namespace Veterinaria.U;
+namespace Veterinaria.UI;
 
 partial class FormInicio
 {
@@ -40,6 +40,7 @@ partial class FormInicio
         // label2
         // 
         label2.Font = new System.Drawing.Font("Segoe UI", 22F, System.Drawing.FontStyle.Bold);
+        label2.ForeColor = System.Drawing.Color.FromArgb(64, 24, 80);
         label2.Location = new System.Drawing.Point(80, 35);
         label2.Name = "label2";
         label2.Size = new System.Drawing.Size(700, 48);
@@ -50,7 +51,7 @@ partial class FormInicio
         // label1
         // 
         label1.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-        label1.ForeColor = System.Drawing.Color.DimGray;
+        label1.ForeColor = System.Drawing.Color.FromArgb(100, 100, 100);
         label1.Location = new System.Drawing.Point(80, 88);
         label1.Name = "label1";
         label1.Size = new System.Drawing.Size(700, 24);
@@ -61,16 +62,17 @@ partial class FormInicio
         // label3
         // 
         label3.Font = new System.Drawing.Font("Segoe UI", 11F);
+        label3.ForeColor = System.Drawing.Color.FromArgb(50, 50, 50);
         label3.Location = new System.Drawing.Point(80, 130);
         label3.Name = "label3";
         label3.Size = new System.Drawing.Size(700, 28);
         label3.TabIndex = 3;
-        label3.Text = "Seleccione el área a la que desea ingresar:";
+        label3.Text = "Seleccione el módulo al que desea ingresar:";
         label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
         // 
         // btnRecepcion
         // 
-        btnRecepcion.BackColor = System.Drawing.Color.ForestGreen;
+        btnRecepcion.BackColor = System.Drawing.Color.FromArgb(64, 24, 80);
         btnRecepcion.Cursor = System.Windows.Forms.Cursors.Hand;
         btnRecepcion.FlatAppearance.BorderSize = 0;
         btnRecepcion.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -80,13 +82,13 @@ partial class FormInicio
         btnRecepcion.Name = "btnRecepcion";
         btnRecepcion.Size = new System.Drawing.Size(260, 155);
         btnRecepcion.TabIndex = 4;
-        btnRecepcion.Text = "📋  RECEPCIÓN\r\n\r\nClientes · Mascotas\r\nCitas Programadas";
+        btnRecepcion.Text = "📋  RECEPCIÓN\r\n\r\nClientes y Pacientes\r\nAgendamiento de Citas";
         btnRecepcion.UseVisualStyleBackColor = false;
         btnRecepcion.Click += btnRecepcion_Click;
         // 
         // btnVeterinario
         // 
-        btnVeterinario.BackColor = System.Drawing.Color.RoyalBlue;
+        btnVeterinario.BackColor = System.Drawing.Color.FromArgb(64, 24, 80);
         btnVeterinario.Cursor = System.Windows.Forms.Cursors.Hand;
         btnVeterinario.FlatAppearance.BorderSize = 0;
         btnVeterinario.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -102,20 +104,26 @@ partial class FormInicio
         // 
         // btnSalir
         // 
+        btnSalir.BackColor = System.Drawing.Color.White;
         btnSalir.Cursor = System.Windows.Forms.Cursors.Hand;
-        btnSalir.Font = new System.Drawing.Font("Segoe UI", 9.5F);
+        btnSalir.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(64, 24, 80);
+        btnSalir.FlatAppearance.BorderSize = 1;
+        btnSalir.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        btnSalir.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+        btnSalir.ForeColor = System.Drawing.Color.FromArgb(64, 24, 80);
         btnSalir.Location = new System.Drawing.Point(365, 385);
         btnSalir.Name = "btnSalir";
         btnSalir.Size = new System.Drawing.Size(130, 38);
         btnSalir.TabIndex = 6;
         btnSalir.Text = "Salir";
-        btnSalir.UseVisualStyleBackColor = true;
+        btnSalir.UseVisualStyleBackColor = false;
         btnSalir.Click += btnSalir_Click;
         // 
         // FormInicio
         // 
         AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
         AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+        BackColor = System.Drawing.Color.White;
         ClientSize = new System.Drawing.Size(860, 480);
         Controls.Add(btnSalir);
         Controls.Add(btnVeterinario);
@@ -126,7 +134,7 @@ partial class FormInicio
         FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-        Text = "SISTEMA DE GESTIÓN VETERINARIA";
+        Text = "Clínica Veterinaria - Menú Principal";
         ResumeLayout(false);
     }
 

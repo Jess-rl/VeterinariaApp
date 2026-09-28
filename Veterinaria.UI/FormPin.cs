@@ -1,6 +1,4 @@
-using System.Net.Mime;
-
-namespace Veterinaria.U;
+namespace Veterinaria.UI;
 
 public partial class FormPin : Form
 {
@@ -8,7 +6,7 @@ public partial class FormPin : Form
     {
         InitializeComponent();
     }
-    
+
     public string PinIngresado => txtPin.Text.Trim();
 
     private void btnAceptar_Click(object sender, EventArgs e)

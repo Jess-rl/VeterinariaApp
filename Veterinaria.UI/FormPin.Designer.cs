@@ -1,4 +1,4 @@
-namespace Veterinaria.U;
+namespace Veterinaria.UI;
 
 partial class FormPin
 {
@@ -37,45 +37,57 @@ partial class FormPin
         // 
         // label1
         // 
-        label1.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
-        label1.Location = new System.Drawing.Point(20, 20);
+        label1.Font = new System.Drawing.Font("Segoe UI", 10.5F, System.Drawing.FontStyle.Bold);
+        label1.ForeColor = System.Drawing.Color.FromArgb(64, 24, 80);
+        label1.Location = new System.Drawing.Point(20, 18);
         label1.Name = "label1";
-        label1.Size = new System.Drawing.Size(380, 25);
+        label1.Size = new System.Drawing.Size(400, 30);
         label1.TabIndex = 0;
-        label1.Text = "INGRESE EL PIN DE AUTENTICACIÓN:";
+        label1.Text = "INGRESE EL PIN DE AUTORIZACIÓN:";
         label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
         // 
         // txtPin
         // 
+        txtPin.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
         txtPin.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
-        txtPin.Location = new System.Drawing.Point(120, 60);
+        txtPin.Location = new System.Drawing.Point(130, 58);
         txtPin.MaxLength = 10;
         txtPin.Name = "txtPin";
-        txtPin.PasswordChar = '*';
+        txtPin.PasswordChar = '●';
         txtPin.Size = new System.Drawing.Size(180, 39);
         txtPin.TabIndex = 1;
         txtPin.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
         // 
         // btnAceptar
         // 
-        btnAceptar.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-        btnAceptar.Location = new System.Drawing.Point(90, 120);
+        btnAceptar.BackColor = System.Drawing.Color.FromArgb(64, 24, 80);
+        btnAceptar.FlatAppearance.BorderSize = 0;
+        btnAceptar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        btnAceptar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+        btnAceptar.ForeColor = System.Drawing.Color.White;
+        btnAceptar.Location = new System.Drawing.Point(95, 125);
         btnAceptar.Name = "btnAceptar";
-        btnAceptar.Size = new System.Drawing.Size(110, 36);
+        btnAceptar.Size = new System.Drawing.Size(120, 40);
         btnAceptar.TabIndex = 2;
         btnAceptar.Text = "Aceptar";
-        btnAceptar.UseVisualStyleBackColor = true;
+        btnAceptar.UseVisualStyleBackColor = false;
+        btnAceptar.Click += btnAceptar_Click;
         // 
         // btnCancelar
         // 
+        btnCancelar.BackColor = System.Drawing.Color.White;
         btnCancelar.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-        btnCancelar.Font = new System.Drawing.Font("Segoe UI", 9.5F);
-        btnCancelar.Location = new System.Drawing.Point(220, 120);
+        btnCancelar.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(64, 24, 80);
+        btnCancelar.FlatAppearance.BorderSize = 1;
+        btnCancelar.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        btnCancelar.Font = new System.Drawing.Font("Segoe UI", 9.5F, System.Drawing.FontStyle.Bold);
+        btnCancelar.ForeColor = System.Drawing.Color.FromArgb(64, 24, 80);
+        btnCancelar.Location = new System.Drawing.Point(225, 125);
         btnCancelar.Name = "btnCancelar";
-        btnCancelar.Size = new System.Drawing.Size(110, 36);
+        btnCancelar.Size = new System.Drawing.Size(120, 40);
         btnCancelar.TabIndex = 3;
         btnCancelar.Text = "Cancelar";
-        btnCancelar.UseVisualStyleBackColor = true;
+        btnCancelar.UseVisualStyleBackColor = false;
         btnCancelar.Click += btnCancelar_Click;
         // 
         // FormPin
@@ -83,8 +95,9 @@ partial class FormPin
         AcceptButton = btnAceptar;
         AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
         AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+        BackColor = System.Drawing.Color.White;
         CancelButton = btnCancelar;
-        ClientSize = new System.Drawing.Size(420, 185);
+        ClientSize = new System.Drawing.Size(440, 195);
         Controls.Add(btnCancelar);
         Controls.Add(btnAceptar);
         Controls.Add(txtPin);
@@ -93,7 +106,7 @@ partial class FormPin
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-        Text = "Acceso de Seguridad";
+        Text = "Autorización Médica";
         ResumeLayout(false);
         PerformLayout();
     }

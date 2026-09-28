@@ -1,4 +1,4 @@
-namespace Veterinaria.U;
+namespace Veterinaria.UI;
 
 public partial class FormInicio : Form
 {
@@ -40,6 +40,6 @@ public partial class FormInicio : Form
                 MessageBox.Show("PIN de acceso incorrecto.", "Acceso denegado");
             }
         }
-        
+
     }
 }
