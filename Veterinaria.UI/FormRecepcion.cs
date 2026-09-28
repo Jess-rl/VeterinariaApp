@@ -1,10 +1,15 @@
 using System.Drawing.Printing;
 using Veterinaria.Entidades;
+using Veterinaria.Negocio;
 
 namespace Veterinaria.UI;
 
 public partial class FormRecepcion : Form
 {
+    private readonly ClienteNegocio _clienteNegocio = new();
+    private readonly MascotaNegocio _mascotaNegocio = new();
+    private readonly CitaNegocio _citaNegocio = new();
+
     private Cita? _citaSeleccionadaParaImprimir;
     private int _idMascotaSeleccionada = 0;
     private bool _sincronizandoCombos = false;
@@ -35,7 +40,6 @@ public partial class FormRecepcion : Form
 
     private void tabRecepcion_SelectedIndexChanged(object sender, EventArgs e)
     {
-        // Al cambiar de pestaña, mantener todas las tablas y desplegables sincronizados con los datos más recientes
         RefrescarListaClientes();
         RefrescarListaMascotas();
         RefrescarListaCitas();
@@ -108,19 +112,27 @@ public partial class FormRecepcion : Form
         if (dgvClientes == null || dgvClientes.Columns.Count == 0) return;
         dgvClientes.Rows.Clear();
         string filtro = txtBuscarCliente?.Text.Trim().ToLowerInvariant() ?? "";
-        var lista = RepositorioDatos.Clientes.AsEnumerable();
-        if (!string.IsNullOrEmpty(filtro))
+        
+        try
         {
-            lista = lista.Where(c =>
-                c.Cedula.ToLowerInvariant().Contains(filtro) ||
-                c.Nombres.ToLowerInvariant().Contains(filtro) ||
-                c.Apellidos.ToLowerInvariant().Contains(filtro) ||
-                c.Telefono.ToLowerInvariant().Contains(filtro));
-        }
+            var lista = _clienteNegocio.ObtenerClientes().AsEnumerable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                lista = lista.Where(c =>
+                    c.Cedula.ToLowerInvariant().Contains(filtro) ||
+                    c.Nombres.ToLowerInvariant().Contains(filtro) ||
+                    c.Apellidos.ToLowerInvariant().Contains(filtro) ||
+                    c.Telefono.ToLowerInvariant().Contains(filtro));
+            }
 
-        foreach (var c in lista)
+            foreach (var c in lista)
+            {
+                dgvClientes.Rows.Add(c.Cedula, c.Nombres, c.Apellidos, c.Telefono, c.Direccion);
+            }
+        }
+        catch (Exception ex)
         {
-            dgvClientes.Rows.Add(c.Cedula, c.Nombres, c.Apellidos, c.Telefono, c.Direccion);
+            MessageBox.Show("Error al cargar clientes desde la base de datos: " + ex.Message, "Error BD", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -141,93 +153,59 @@ public partial class FormRecepcion : Form
 
     private void btnGuardar_Click(object sender, EventArgs e)
     {
-        // 1. Validar campos obligatorios
-        if (string.IsNullOrWhiteSpace(txtCedula.Text) ||
-            string.IsNullOrWhiteSpace(txtNombre.Text) ||
-            string.IsNullOrWhiteSpace(txtApellidos.Text) ||
-            string.IsNullOrWhiteSpace(txtTelefono.Text) ||
-            string.IsNullOrWhiteSpace(txtDireccion.Text))
-        {
-            MessageBox.Show("Por favor complete todos los datos del cliente.", "Campos incompletos", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-
-        string cedula = txtCedula.Text.Trim();
-
-        // 2. Verificar duplicado con .Any()
-        if (RepositorioDatos.Clientes.Any(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase)))
-        {
-            MessageBox.Show($"Ya existe un cliente registrado con la cédula {cedula}.", "Cédula Duplicada", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            txtCedula.Focus();
-            return;
-        }
-
-        // 3. Instanciar cliente con constructor parametrizado
-        Cliente nuevoCliente = new Cliente(
-            cedula,
+        var nuevoCliente = new Cliente(
+            txtCedula.Text.Trim(),
             txtNombre.Text.Trim(),
             txtApellidos.Text.Trim(),
             txtTelefono.Text.Trim(),
             txtDireccion.Text.Trim()
         );
 
-        // 4. Guardar en repositorio compartido
-        RepositorioDatos.Clientes.Add(nuevoCliente);
+        if (!_clienteNegocio.GuardarCliente(nuevoCliente, out string mensajeErr))
+        {
+            MessageBox.Show(mensajeErr, "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
-        // 5. Actualizar interfaz
         RefrescarListaClientes();
         CargarCombosClientes();
         LimpiarCampos();
 
-        MessageBox.Show("Cliente registrado exitosamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show("Cliente registrado exitosamente en la base de datos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void btnModificar_Click(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(txtCedula.Text))
+        var cliente = new Cliente(
+            txtCedula.Text.Trim(),
+            txtNombre.Text.Trim(),
+            txtApellidos.Text.Trim(),
+            txtTelefono.Text.Trim(),
+            txtDireccion.Text.Trim()
+        );
+
+        if (!_clienteNegocio.ModificarCliente(cliente, out string mensajeErr))
         {
-            MessageBox.Show("Seleccione o especifique la cédula del cliente a modificar.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show(mensajeErr, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-
-        string cedula = txtCedula.Text.Trim();
-        var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase));
-
-        if (cliente == null)
-        {
-            MessageBox.Show("No se encontró ningún cliente con la cédula indicada.", "No encontrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-
-        cliente.Nombres = txtNombre.Text.Trim();
-        cliente.Apellidos = txtApellidos.Text.Trim();
-        cliente.Telefono = txtTelefono.Text.Trim();
-        cliente.Direccion = txtDireccion.Text.Trim();
 
         RefrescarListaClientes();
         CargarCombosClientes();
-        MessageBox.Show("Datos del cliente modificados exitosamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show("Datos del cliente modificados exitosamente en la base de datos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void btnEliminar_Click(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(txtCedula.Text))
+        string cedula = txtCedula.Text.Trim();
+        if (string.IsNullOrWhiteSpace(cedula))
         {
             MessageBox.Show("Seleccione un cliente para eliminar.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        string cedula = txtCedula.Text.Trim();
-        var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase));
-
-        if (cliente == null)
-        {
-            MessageBox.Show("El cliente no existe o ya fue eliminado.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-
         var confirmacion = MessageBox.Show(
-            $"¿Está seguro de eliminar al cliente '{cliente.Nombres} {cliente.Apellidos}' con cédula {cliente.Cedula}?",
+            $"¿Está seguro de eliminar al cliente con cédula {cedula}?",
             "Confirmar eliminación",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question
@@ -235,7 +213,12 @@ public partial class FormRecepcion : Form
 
         if (confirmacion == DialogResult.Yes)
         {
-            RepositorioDatos.Clientes.Remove(cliente);
+            if (!_clienteNegocio.EliminarCliente(cedula, out string mensajeErr))
+            {
+                MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             RefrescarListaClientes();
             CargarCombosClientes();
             LimpiarCampos();
@@ -258,26 +241,7 @@ public partial class FormRecepcion : Form
 
     #endregion
 
-    #region GESTIÓN DE MASCOTAS
-
-    private void txtCedulaDueno_TextChanged(object sender, EventArgs e)
-    {
-        if (_sincronizandoCombos) return;
-
-        string cedula = txtCedulaDueno.Text.Trim();
-        if (string.IsNullOrEmpty(cedula)) return;
-
-        _sincronizandoCombos = true;
-        for (int i = 0; i < cmbClienteMascota.Items.Count; i++)
-        {
-            if (cmbClienteMascota.Items[i] is ClienteItem it && it.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase))
-            {
-                cmbClienteMascota.SelectedIndex = i;
-                break;
-            }
-        }
-        _sincronizandoCombos = false;
-    }
+    #region MÓDULO 3 - SECCIÓN MASCOTAS
 
     private void cmbClienteMascota_SelectedIndexChanged(object sender, EventArgs e)
     {
@@ -291,6 +255,25 @@ public partial class FormRecepcion : Form
         }
     }
 
+    private void txtCedulaDueno_TextChanged(object sender, EventArgs e)
+    {
+        if (_sincronizandoCombos) return;
+
+        string cedula = txtCedulaDueno.Text.Trim();
+        if (string.IsNullOrEmpty(cedula)) return;
+
+        _sincronizandoCombos = true;
+        for (int i = 0; i < cmbClienteMascota.Items.Count; i++)
+        {
+            if (cmbClienteMascota.Items[i] is ClienteItem item && item.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase))
+            {
+                cmbClienteMascota.SelectedIndex = i;
+                break;
+            }
+        }
+        _sincronizandoCombos = false;
+    }
+
     private void txtBuscarMascota_TextChanged(object sender, EventArgs e)
     {
         RefrescarListaMascotas();
@@ -301,34 +284,43 @@ public partial class FormRecepcion : Form
         if (dgvMascotasRecepcion == null || dgvMascotasRecepcion.Columns.Count == 0) return;
         dgvMascotasRecepcion.Rows.Clear();
         string filtro = txtBuscarMascota?.Text.Trim().ToLowerInvariant() ?? "";
-        var lista = RepositorioDatos.Mascotas.AsEnumerable();
-        if (!string.IsNullOrEmpty(filtro))
-        {
-            lista = lista.Where(m =>
-            {
-                var dueno = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == m.CedulaCliente);
-                string nomDueno = dueno != null ? $"{dueno.Nombres} {dueno.Apellidos}" : "";
-                return m.Nombre.ToLowerInvariant().Contains(filtro) ||
-                       m.Especie.ToLowerInvariant().Contains(filtro) ||
-                       m.Raza.ToLowerInvariant().Contains(filtro) ||
-                       m.CedulaCliente.ToLowerInvariant().Contains(filtro) ||
-                       nomDueno.ToLowerInvariant().Contains(filtro);
-            });
-        }
 
-        foreach (var m in lista)
+        try
         {
-            var dueno = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == m.CedulaCliente);
-            string duenoTexto = dueno != null ? $"{dueno.Nombres} {dueno.Apellidos} ({m.CedulaCliente})" : m.CedulaCliente;
-            dgvMascotasRecepcion.Rows.Add(
-                m.IdMascota,
-                m.Nombre,
-                m.Especie,
-                m.Raza,
-                m.Sexo,
-                m.FechaNacimiento.ToString("dd/MM/yyyy"),
-                duenoTexto
-            );
+            var listaClientes = _clienteNegocio.ObtenerClientes();
+            var lista = _mascotaNegocio.ObtenerMascotas().AsEnumerable();
+            if (!string.IsNullOrEmpty(filtro))
+            {
+                lista = lista.Where(m =>
+                {
+                    var dueno = listaClientes.FirstOrDefault(c => c.Cedula.Trim().Equals(m.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase));
+                    string nomDueno = dueno != null ? $"{dueno.Nombres} {dueno.Apellidos}" : "";
+                    return m.Nombre.ToLowerInvariant().Contains(filtro) ||
+                           m.Especie.ToLowerInvariant().Contains(filtro) ||
+                           m.Raza.ToLowerInvariant().Contains(filtro) ||
+                           m.CedulaCliente.ToLowerInvariant().Contains(filtro) ||
+                           nomDueno.ToLowerInvariant().Contains(filtro);
+                });
+            }
+
+            foreach (var m in lista)
+            {
+                var dueno = listaClientes.FirstOrDefault(c => c.Cedula.Trim().Equals(m.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase));
+                string duenoTexto = dueno != null ? $"{dueno.Nombres} {dueno.Apellidos} ({m.CedulaCliente})" : m.CedulaCliente;
+                dgvMascotasRecepcion.Rows.Add(
+                    m.IdMascota,
+                    m.Nombre,
+                    m.Especie,
+                    m.Raza,
+                    m.Sexo,
+                    m.FechaNacimiento != DateTime.MinValue ? m.FechaNacimiento.ToString("dd/MM/yyyy") : "-",
+                    duenoTexto
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error al cargar mascotas desde la base de datos: " + ex.Message, "Error BD", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -336,10 +328,9 @@ public partial class FormRecepcion : Form
     {
         string cedulaDueno = string.Empty;
 
-        // Validar si el usuario escribió la cédula o la seleccionó del combo
         if (!string.IsNullOrWhiteSpace(txtCedulaDueno.Text))
         {
-            var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(txtCedulaDueno.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+            var cliente = _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(txtCedulaDueno.Text.Trim(), StringComparison.OrdinalIgnoreCase));
             if (cliente != null)
             {
                 cedulaDueno = cliente.Cedula;
@@ -366,10 +357,8 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        int nuevoId = RepositorioDatos.Mascotas.Any() ? RepositorioDatos.Mascotas.Max(m => m.IdMascota) + 1 : 1;
-
         Mascota nuevaMascota = new Mascota(
-            nuevoId,
+            0,
             txtNombreMascota.Text.Trim(),
             txtEspecie.Text.Trim(),
             txtRaza.Text.Trim(),
@@ -378,14 +367,17 @@ public partial class FormRecepcion : Form
             cmbSexo.SelectedItem?.ToString() ?? "Macho"
         );
 
-        RepositorioDatos.Mascotas.Add(nuevaMascota);
+        if (!_mascotaNegocio.GuardarMascota(nuevaMascota, out string mensajeErr))
+        {
+            MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         RefrescarListaMascotas();
         LimpiarCamposMascota();
-
-        // Actualizar desplegables de citas
         ActualizarComboMascotasPorCedula();
 
-        MessageBox.Show("Mascota registrada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show("Mascota registrada correctamente en la base de datos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void btnModificarMascota_Click(object sender, EventArgs e)
@@ -396,35 +388,31 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == _idMascotaSeleccionada);
-        if (mascota == null)
+        string cedulaDueno = txtCedulaDueno.Text.Trim();
+        if (cmbClienteMascota.SelectedItem is ClienteItem ci && !string.IsNullOrEmpty(ci.Cedula))
         {
-            MessageBox.Show("Mascota no encontrada.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            cedulaDueno = ci.Cedula;
+        }
+
+        var mascota = new Mascota(
+            _idMascotaSeleccionada,
+            txtNombreMascota.Text.Trim(),
+            txtEspecie.Text.Trim(),
+            txtRaza.Text.Trim(),
+            dtpFechaNacimiento.Value,
+            cedulaDueno,
+            cmbSexo.SelectedItem?.ToString() ?? "Macho"
+        );
+
+        if (!_mascotaNegocio.ModificarMascota(mascota, out string mensajeErr))
+        {
+            MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(txtCedulaDueno.Text))
-        {
-            var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(txtCedulaDueno.Text.Trim(), StringComparison.OrdinalIgnoreCase));
-            if (cliente != null)
-            {
-                mascota.CedulaCliente = cliente.Cedula;
-            }
-        }
-        else if (cmbClienteMascota.SelectedItem is ClienteItem ci && !string.IsNullOrEmpty(ci.Cedula))
-        {
-            mascota.CedulaCliente = ci.Cedula;
-        }
-
-        mascota.Nombre = txtNombreMascota.Text.Trim();
-        mascota.Especie = txtEspecie.Text.Trim();
-        mascota.Raza = txtRaza.Text.Trim();
-        mascota.Sexo = cmbSexo.SelectedItem?.ToString() ?? "Macho";
-        mascota.FechaNacimiento = dtpFechaNacimiento.Value;
-
         RefrescarListaMascotas();
         ActualizarComboMascotasPorCedula();
-        MessageBox.Show("Datos de la mascota actualizados.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show("Datos de la mascota actualizados exitosamente en la base de datos.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void btnEliminarMascota_Click(object sender, EventArgs e)
@@ -435,16 +423,18 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == _idMascotaSeleccionada);
-        if (mascota == null) return;
-
-        if (MessageBox.Show($"¿Desea eliminar a la mascota '{mascota.Nombre}'?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+        if (MessageBox.Show($"¿Desea eliminar a la mascota seleccionada?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
         {
-            RepositorioDatos.Mascotas.Remove(mascota);
+            if (!_mascotaNegocio.EliminarMascota(_idMascotaSeleccionada, out string mensajeErr))
+            {
+                MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             RefrescarListaMascotas();
             ActualizarComboMascotasPorCedula();
             LimpiarCamposMascota();
-            MessageBox.Show("Mascota eliminada.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Mascota eliminada correctamente.", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 
@@ -474,7 +464,7 @@ public partial class FormRecepcion : Form
             if (int.TryParse(fila.Cells["IdMascota"].Value?.ToString(), out int id))
             {
                 _idMascotaSeleccionada = id;
-                var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == id);
+                var mascota = _mascotaNegocio.ObtenerMascotas().FirstOrDefault(m => m.IdMascota == id);
                 if (mascota != null)
                 {
                     txtCedulaDueno.Text = mascota.CedulaCliente;
@@ -482,12 +472,14 @@ public partial class FormRecepcion : Form
                     txtEspecie.Text = mascota.Especie;
                     txtRaza.Text = mascota.Raza;
                     cmbSexo.SelectedItem = mascota.Sexo;
-                    dtpFechaNacimiento.Value = mascota.FechaNacimiento;
+                    if (mascota.FechaNacimiento != DateTime.MinValue)
+                    {
+                        dtpFechaNacimiento.Value = mascota.FechaNacimiento;
+                    }
 
-                    // Seleccionar dueño en combo
                     for (int i = 0; i < cmbClienteMascota.Items.Count; i++)
                     {
-                        if (cmbClienteMascota.Items[i] is ClienteItem it && it.Cedula == mascota.CedulaCliente)
+                        if (cmbClienteMascota.Items[i] is ClienteItem item && item.Cedula == mascota.CedulaCliente)
                         {
                             cmbClienteMascota.SelectedIndex = i;
                             break;
@@ -500,24 +492,22 @@ public partial class FormRecepcion : Form
 
     #endregion
 
-    #region MÓDULO 2 - SECCIÓN CITAS
+    #region MÓDULO 4 - SECCIÓN AGENDAMIENTO DE CITAS
 
     private void CargarCombosClientes()
     {
         _sincronizandoCombos = true;
-
         string? cedulaDuenoMascotaPrevio = (cmbClienteMascota.SelectedItem as ClienteItem)?.Cedula;
 
         cmbClienteMascota.Items.Clear();
 
-        // 1. Combo Dueño en Pestaña Mascotas
-        foreach (var c in RepositorioDatos.Clientes)
+        var clientes = _clienteNegocio.ObtenerClientes();
+        foreach (var c in clientes)
         {
             var item = new ClienteItem(c.Cedula, $"{c.Nombres} {c.Apellidos} ({c.Cedula})");
             cmbClienteMascota.Items.Add(item);
         }
 
-        // Restaurar selección previa en Mascotas
         if (!string.IsNullOrEmpty(cedulaDuenoMascotaPrevio))
         {
             for (int i = 0; i < cmbClienteMascota.Items.Count; i++)
@@ -565,15 +555,13 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase));
+        var cliente = _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase));
         if (cliente != null)
         {
             lblNombreDuenoCita.Text = $"Propietario: {cliente.Nombres} {cliente.Apellidos}";
             lblNombreDuenoCita.ForeColor = Color.FromArgb(64, 24, 80);
 
-            var listaMascotas = RepositorioDatos.Mascotas
-                .Where(m => m.CedulaCliente.Trim().Equals(cliente.Cedula.Trim(), StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            var listaMascotas = _mascotaNegocio.ObtenerMascotasPorDueno(cliente.Cedula);
 
             if (listaMascotas.Count == 0)
             {
@@ -614,38 +602,49 @@ public partial class FormRecepcion : Form
         if (dgvCitas == null || dgvCitas.Columns.Count == 0) return;
         dgvCitas.Rows.Clear();
         string filtro = cmbFiltroEstadoCitas?.SelectedItem?.ToString() ?? "Todas las Citas";
-        var lista = RepositorioDatos.Citas.OrderByDescending(c => c.Fecha).AsEnumerable();
 
-        if (filtro == "Solo Pendientes")
-            lista = lista.Where(c => c.Estado.Equals("Pendiente", StringComparison.OrdinalIgnoreCase));
-        else if (filtro == "Solo Atendidas")
-            lista = lista.Where(c => c.Estado.Equals("Atendida", StringComparison.OrdinalIgnoreCase));
-        else if (filtro == "Solo Canceladas")
-            lista = lista.Where(c => c.Estado.Equals("Cancelada", StringComparison.OrdinalIgnoreCase));
-
-        foreach (var cita in lista)
+        try
         {
-            var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
-            string nombreMascota = mascota != null ? mascota.Nombre : $"ID #{cita.IdMascota}";
-            string nombreCliente = "Desconocido";
+            var lista = _citaNegocio.ObtenerCitas().AsEnumerable();
 
-            if (mascota != null)
+            if (filtro == "Solo Pendientes")
+                lista = lista.Where(c => c.Estado.Equals("PENDIENTE", StringComparison.OrdinalIgnoreCase));
+            else if (filtro == "Solo Atendidas")
+                lista = lista.Where(c => c.Estado.Equals("ATENDIDA", StringComparison.OrdinalIgnoreCase));
+            else if (filtro == "Solo Canceladas")
+                lista = lista.Where(c => c.Estado.Equals("CANCELADA", StringComparison.OrdinalIgnoreCase));
+
+            var listaMascotas = _mascotaNegocio.ObtenerMascotas();
+            var listaClientes = _clienteNegocio.ObtenerClientes();
+
+            foreach (var cita in lista)
             {
-                var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == mascota.CedulaCliente);
-                if (cliente != null)
-                {
-                    nombreCliente = $"{cliente.Nombres} {cliente.Apellidos}";
-                }
-            }
+                var mascota = listaMascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
+                string nombreMascota = mascota != null ? mascota.Nombre : $"ID #{cita.IdMascota}";
+                string nombreCliente = "Desconocido";
 
-            dgvCitas.Rows.Add(
-                cita.IdCita,
-                cita.Fecha.ToString("dd/MM/yyyy HH:mm"),
-                nombreCliente,
-                nombreMascota,
-                cita.Motivo,
-                cita.Estado
-            );
+                if (mascota != null)
+                {
+                    var cliente = listaClientes.FirstOrDefault(c => c.Cedula.Trim().Equals(mascota.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (cliente != null)
+                    {
+                        nombreCliente = $"{cliente.Nombres} {cliente.Apellidos}";
+                    }
+                }
+
+                dgvCitas.Rows.Add(
+                    cita.IdCita,
+                    cita.Fecha.ToString("dd/MM/yyyy HH:mm"),
+                    nombreCliente,
+                    nombreMascota,
+                    cita.Motivo,
+                    cita.Estado
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error al cargar citas desde la base de datos: " + ex.Message, "Error BD", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -656,22 +655,25 @@ public partial class FormRecepcion : Form
         var fila = dgvCitas.Rows[e.RowIndex];
         if (int.TryParse(fila.Cells["IdCita"].Value?.ToString(), out int idCita))
         {
-            var cita = RepositorioDatos.Citas.FirstOrDefault(c => c.IdCita == idCita);
+            var cita = _citaNegocio.ObtenerCitas().FirstOrDefault(c => c.IdCita == idCita);
             if (cita != null)
             {
-                var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
+                var mascota = _mascotaNegocio.ObtenerMascotas().FirstOrDefault(m => m.IdMascota == cita.IdMascota);
                 if (mascota != null)
                 {
                     txtCedulaCita.Text = mascota.CedulaCliente;
+                    ActualizarComboMascotasPorCedula();
+
                     for (int i = 0; i < cmbMascotas.Items.Count; i++)
                     {
-                        if (cmbMascotas.Items[i] is MascotaItem mi && mi.IdMascota == mascota.IdMascota)
+                        if (cmbMascotas.Items[i] is MascotaItem item && item.IdMascota == mascota.IdMascota)
                         {
                             cmbMascotas.SelectedIndex = i;
                             break;
                         }
                     }
                 }
+
                 dtpFechaCita.Value = cita.Fecha;
                 txtMotivo.Text = cita.Motivo;
             }
@@ -680,14 +682,15 @@ public partial class FormRecepcion : Form
 
     private void btnAgendarCita_Click(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(txtCedulaCita.Text))
+        string cedula = txtCedulaCita.Text.Trim();
+        if (string.IsNullOrWhiteSpace(cedula))
         {
-            MessageBox.Show("Por favor ingrese la cédula del cliente/dueño.", "Cédula requerida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("Por favor escriba la cédula del cliente para agendar la cita.", "Cédula Requerida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             txtCedulaCita.Focus();
             return;
         }
 
-        var cliente = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(txtCedulaCita.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+        var cliente = _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(cedula, StringComparison.OrdinalIgnoreCase));
         if (cliente == null)
         {
             MessageBox.Show("No se encontró ningún cliente registrado con esa cédula.\nRegístrelo primero en la pestaña 'Registro de Clientes'.", "Cliente No Registrado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -695,7 +698,6 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        // 1. Validar selección de mascota válida
         if (cmbMascotas.SelectedItem is not MascotaItem mascotaItem || mascotaItem.IdMascota <= 0)
         {
             MessageBox.Show("Por favor seleccione una mascota válida para agendar la cita.", "Mascota no seleccionada", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -709,32 +711,26 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == mascotaItem.IdMascota);
-        if (mascota == null)
-        {
-            MessageBox.Show("No se encontró el registro de la mascota.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        // 2. Crear objeto Cita con estado "Pendiente"
-        int nuevoId = RepositorioDatos.Citas.Count != 0 ? RepositorioDatos.Citas.Max(c => c.IdCita) + 1 : 1;
         var nuevaCita = new Cita(
-            nuevoId,
+            0,
             dtpFechaCita.Value,
             txtMotivo.Text.Trim(),
-            "Pendiente",
-            mascota.IdMascota,
+            "PENDIENTE",
+            mascotaItem.IdMascota,
             1
         );
 
-        // 3. Guardar en lista compartida y refrescar dgvCitas
-        RepositorioDatos.Citas.Add(nuevaCita);
-        RefrescarListaCitas();
+        if (!_citaNegocio.AgendarCita(nuevaCita, out string mensajeErr))
+        {
+            MessageBox.Show(mensajeErr, "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
+        RefrescarListaCitas();
         txtMotivo.Clear();
         dtpFechaCita.Value = DateTime.Now.AddHours(1);
 
-        MessageBox.Show($"Cita N° {nuevoId} agendada exitosamente con estado 'Pendiente' para {mascota.Nombre}.", "Cita Agendada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show($"Cita agendada exitosamente en la base de datos para {mascotaItem.Texto}.", "Cita Agendada", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void btnCancelarCita_Click(object sender, EventArgs e)
@@ -747,42 +743,39 @@ public partial class FormRecepcion : Form
 
         if (int.TryParse(dgvCitas.CurrentRow.Cells["IdCita"].Value?.ToString(), out int idCita))
         {
-            var cita = RepositorioDatos.Citas.FirstOrDefault(c => c.IdCita == idCita);
-            if (cita != null)
+            if (MessageBox.Show($"¿Desea marcar como Cancelada la cita #{idCita}?", "Confirmar cancelación", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                if (MessageBox.Show($"¿Desea marcar como Cancelada la cita #{cita.IdCita}?", "Confirmar cancelación", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                if (!_citaNegocio.CancelarCita(idCita, out string mensajeErr))
                 {
-                    cita.Estado = "Cancelada";
-                    RefrescarListaCitas();
-                    MessageBox.Show("Cita cancelada.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
+
+                RefrescarListaCitas();
+                MessageBox.Show("Cita cancelada satisfactoriamente.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }
 
     private void btnImprimirCita_Click(object sender, EventArgs e)
     {
-        // 1. Validar que haya una cita seleccionada en dgvCitas
         if (dgvCitas.CurrentRow == null)
         {
             MessageBox.Show("Por favor, seleccione una cita de la tabla para imprimir el comprobante.", "Cita no seleccionada", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        if (!int.TryParse(dgvCitas.CurrentRow.Cells["IdCita"].Value?.ToString(), out int idCita))
+        if (int.TryParse(dgvCitas.CurrentRow.Cells["IdCita"].Value?.ToString(), out int idCita))
         {
-            MessageBox.Show("No se pudo identificar la cita seleccionada.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            _citaSeleccionadaParaImprimir = _citaNegocio.ObtenerCitas().FirstOrDefault(c => c.IdCita == idCita);
         }
 
-        _citaSeleccionadaParaImprimir = RepositorioDatos.Citas.FirstOrDefault(c => c.IdCita == idCita);
         if (_citaSeleccionadaParaImprimir == null)
         {
-            MessageBox.Show("La cita seleccionada no existe en el repositorio.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show("No se encontró la información de la cita seleccionada.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
 
-        // 2. Usar PrintDocument y PrintPreviewDialog
         using var printDoc = new PrintDocument();
         printDoc.DocumentName = $"Comprobante_Cita_{_citaSeleccionadaParaImprimir.IdCita}";
         printDoc.PrintPage += ImprimirComprobanteCita_PrintPage;
@@ -804,8 +797,8 @@ public partial class FormRecepcion : Form
 
         Graphics g = e.Graphics;
         var cita = _citaSeleccionadaParaImprimir;
-        var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
-        var cliente = mascota != null ? RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == mascota.CedulaCliente) : null;
+        var mascota = _mascotaNegocio.ObtenerMascotas().FirstOrDefault(m => m.IdMascota == cita.IdMascota);
+        var cliente = mascota != null ? _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(mascota.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase)) : null;
 
         // Fuentes
         using var fontTitulo = new Font("Segoe UI", 18, FontStyle.Bold);
@@ -868,7 +861,7 @@ public partial class FormRecepcion : Form
         string nomMascota = mascota != null ? mascota.Nombre : "No registrado";
         string espMascota = mascota != null ? mascota.Especie : "N/D";
         string razMascota = mascota != null ? mascota.Raza : "N/D";
-        g.DrawString($"Nombre del Paciente: {nomMascota}", fontTexto, brushTexto, x + 15, y + 35);
+        g.DrawString($"Nombre del Paciente: {nomMascota} ({mascota?.Sexo ?? "Macho"})", fontTexto, brushTexto, x + 15, y + 35);
         g.DrawString($"Especie: {espMascota}", fontTexto, brushTexto, x + 400, y + 35);
         g.DrawString($"Raza: {razMascota}", fontTexto, brushTexto, x + 15, y + 55);
         y += 95;
@@ -927,7 +920,7 @@ public partial class FormRecepcion : Form
         public string Texto { get; }
         public string CedulaCliente { get; }
 
-        public MascotaItem(int idMascota, string texto, string cedulaCliente = "")
+        public MascotaItem(int idMascota, string texto, string cedulaCliente)
         {
             IdMascota = idMascota;
             Texto = texto;

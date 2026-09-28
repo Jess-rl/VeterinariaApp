@@ -1,10 +1,16 @@
 using System.Drawing.Printing;
 using Veterinaria.Entidades;
+using Veterinaria.Negocio;
 
 namespace Veterinaria.UI;
 
 public partial class FormVeterinario : Form
 {
+    private readonly CitaNegocio _citaNegocio = new();
+    private readonly MascotaNegocio _mascotaNegocio = new();
+    private readonly ClienteNegocio _clienteNegocio = new();
+    private readonly HistorialClinicoNegocio _historialNegocio = new();
+
     private Cita? _citaSeleccionada;
     private Mascota? _mascotaSeleccionada;
     private Cliente? _duenoSeleccionado;
@@ -74,48 +80,55 @@ public partial class FormVeterinario : Form
     {
         if (dgvPacientesEspera == null || dgvPacientesEspera.Columns.Count == 0) return;
         dgvPacientesEspera.Rows.Clear();
-        var citasPendientes = RepositorioDatos.Citas
-            .Where(c => c.Estado.Equals("Pendiente", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(c => c.Fecha)
-            .ToList();
 
-        foreach (var cita in citasPendientes)
+        try
         {
-            var mascota = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
-            string nombreMascota = mascota != null ? mascota.Nombre : $"ID #{cita.IdMascota}";
-            string especieRaza = mascota != null ? $"{mascota.Especie} ({mascota.Raza})" : "N/D";
-            string nombreDueno = "N/D";
-            string telDueno = "N/D";
+            var citasPendientes = _citaNegocio.ObtenerCitasPendientes();
+            var mascotas = _mascotaNegocio.ObtenerMascotas();
+            var clientes = _clienteNegocio.ObtenerClientes();
 
-            if (mascota != null)
+            foreach (var cita in citasPendientes)
             {
-                var dueno = RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == mascota.CedulaCliente);
-                if (dueno != null)
+                var mascota = mascotas.FirstOrDefault(m => m.IdMascota == cita.IdMascota);
+                string nombreMascota = mascota != null ? mascota.Nombre : $"ID #{cita.IdMascota}";
+                string especieRaza = mascota != null ? $"{mascota.Especie} ({mascota.Raza})" : "N/D";
+                string nombreDueno = "N/D";
+                string telDueno = "N/D";
+
+                if (mascota != null)
                 {
-                    nombreDueno = $"{dueno.Nombres} {dueno.Apellidos}";
-                    telDueno = dueno.Telefono;
+                    var dueno = clientes.FirstOrDefault(c => c.Cedula.Trim().Equals(mascota.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (dueno != null)
+                    {
+                        nombreDueno = $"{dueno.Nombres} {dueno.Apellidos}";
+                        telDueno = dueno.Telefono;
+                    }
                 }
+
+                dgvPacientesEspera.Rows.Add(
+                    cita.IdCita,
+                    cita.Fecha.ToString("dd/MM/yyyy HH:mm"),
+                    nombreMascota,
+                    especieRaza,
+                    nombreDueno,
+                    telDueno,
+                    cita.Motivo,
+                    cita.Estado
+                );
             }
 
-            dgvPacientesEspera.Rows.Add(
-                cita.IdCita,
-                cita.Fecha.ToString("dd/MM/yyyy HH:mm"),
-                nombreMascota,
-                especieRaza,
-                nombreDueno,
-                telDueno,
-                cita.Motivo,
-                cita.Estado
-            );
+            if (citasPendientes.Count == 0)
+            {
+                lblInfoPaciente.Text = "No hay pacientes en espera en este momento.";
+                dgvHistorial.Rows.Clear();
+                _citaSeleccionada = null;
+                _mascotaSeleccionada = null;
+                _duenoSeleccionado = null;
+            }
         }
-
-        if (citasPendientes.Count == 0)
+        catch (Exception ex)
         {
-            lblInfoPaciente.Text = "No hay pacientes en espera en este momento.";
-            dgvHistorial.Rows.Clear();
-            _citaSeleccionada = null;
-            _mascotaSeleccionada = null;
-            _duenoSeleccionado = null;
+            MessageBox.Show("Error al cargar pacientes en espera desde la base de datos: " + ex.Message, "Error BD", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -127,12 +140,12 @@ public partial class FormVeterinario : Form
         var fila = dgvPacientesEspera.Rows[e.RowIndex];
         if (!int.TryParse(fila.Cells["IdCita"].Value?.ToString(), out int idCita)) return;
 
-        _citaSeleccionada = RepositorioDatos.Citas.FirstOrDefault(c => c.IdCita == idCita);
+        _citaSeleccionada = _citaNegocio.ObtenerCitas().FirstOrDefault(c => c.IdCita == idCita);
         if (_citaSeleccionada == null) return;
 
-        _mascotaSeleccionada = RepositorioDatos.Mascotas.FirstOrDefault(m => m.IdMascota == _citaSeleccionada.IdMascota);
+        _mascotaSeleccionada = _mascotaNegocio.ObtenerMascotas().FirstOrDefault(m => m.IdMascota == _citaSeleccionada.IdMascota);
         _duenoSeleccionado = _mascotaSeleccionada != null
-            ? RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == _mascotaSeleccionada.CedulaCliente)
+            ? _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(_mascotaSeleccionada.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase))
             : null;
 
         if (_mascotaSeleccionada != null)
@@ -148,25 +161,30 @@ public partial class FormVeterinario : Form
     {
         if (dgvHistorial == null || dgvHistorial.Columns.Count == 0) return;
         dgvHistorial.Rows.Clear();
-        var historial = RepositorioDatos.Consultas
-            .Where(c => c.IdMascota == idMascota)
-            .OrderByDescending(c => c.Fecha)
-            .ToList();
 
-        foreach (var c in historial)
+        try
         {
-            dgvHistorial.Rows.Add(
-                c.Fecha.ToString("dd/MM/yyyy HH:mm"),
-                c.Peso > 0 ? $"{c.Peso:0.0} kg" : "N/D",
-                c.Temperatura > 0 ? $"{c.Temperatura:0.0} °C" : "N/D",
-                c.Diagnostico,
-                c.Tratamiento,
-                c.Observaciones
-            );
+            var historial = _historialNegocio.ObtenerHistorialPorMascota(idMascota);
+
+            foreach (var h in historial)
+            {
+                dgvHistorial.Rows.Add(
+                    h.Fecha.ToString("dd/MM/yyyy HH:mm"),
+                    h.Peso > 0 ? $"{h.Peso:0.0} kg" : "N/D",
+                    "-",
+                    h.Diagnostico,
+                    h.Tratamiento,
+                    "-"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error al cargar historial clínico: " + ex.Message, "Error BD", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
-    // 3. btnGuardarConsulta_Click: Validar diagnóstico y tratamiento obligatorios, registrar consulta, actualizar cita a "Atendida"
+    // 3. btnGuardarConsulta_Click: Validar diagnóstico y tratamiento obligatorios, registrar atención, actualizar cita a "Atendida"
     private void btnGuardarConsulta_Click(object sender, EventArgs e)
     {
         if (_mascotaSeleccionada == null || _citaSeleccionada == null)
@@ -175,7 +193,6 @@ public partial class FormVeterinario : Form
             return;
         }
 
-        // Validación de diagnóstico y tratamiento obligatorios
         if (string.IsNullOrWhiteSpace(txtDiagnostico.Text))
         {
             MessageBox.Show("El diagnóstico médico es un campo obligatorio.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -196,41 +213,42 @@ public partial class FormVeterinario : Form
             decimal.TryParse(txtPeso.Text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out peso);
         }
 
-        decimal temp = 0;
+        string tratamientoCompleto = txtTratamiento.Text.Trim();
+        if (!string.IsNullOrWhiteSpace(txtObservaciones.Text))
+        {
+            tratamientoCompleto += $"\n[Obs: {txtObservaciones.Text.Trim()}]";
+        }
         if (!string.IsNullOrWhiteSpace(txtTemperatura.Text))
         {
-            decimal.TryParse(txtTemperatura.Text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out temp);
+            tratamientoCompleto += $" [Temp: {txtTemperatura.Text.Trim()}°C]";
         }
 
-        // Crear registro de Consulta
-        int nuevoId = RepositorioDatos.Consultas.Count != 0 ? RepositorioDatos.Consultas.Max(c => c.IdConsulta) + 1 : 1;
-        var nuevaConsulta = new Consulta(
-            nuevoId,
+        var nuevoHistorial = new HistorialClinico(
+            0,
             DateTime.Now,
             peso,
             txtDiagnostico.Text.Trim(),
-            txtTratamiento.Text.Trim(),
-            txtObservaciones.Text.Trim(),
+            tratamientoCompleto,
             _mascotaSeleccionada.IdMascota,
-            1,
-            temp
+            1
         );
 
-        // Guardar en repositorio compartido
-        RepositorioDatos.Consultas.Add(nuevaConsulta);
+        if (!_historialNegocio.RegistrarAtencion(nuevoHistorial, out string mensajeErr))
+        {
+            MessageBox.Show(mensajeErr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
-        // Cambiar estado de la cita a "Atendida"
-        _citaSeleccionada.Estado = "Atendida";
+        // Cambiar estado de la cita a "ATENDIDA" en la base de datos
+        _citaNegocio.AtenderCita(_citaSeleccionada.IdCita, out _);
 
-        // Refrescar ambas tablas
         int idMascotaAtendida = _mascotaSeleccionada.IdMascota;
         CargarPacientesEnEspera();
         CargarHistorialClinico(idMascotaAtendida);
 
-        // Limpiar cajas de redacción
         LimpiarCamposConsulta();
 
-        MessageBox.Show($"Consulta médica #{nuevoId} guardada con éxito.\nLa cita fue actualizada a estado 'Atendida'.", "Consulta Finalizada", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show($"Atención médica guardada con éxito en la base de datos.\nLa cita fue actualizada a estado 'ATENDIDA'.", "Consulta Finalizada", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void LimpiarCamposConsulta()
@@ -248,7 +266,6 @@ public partial class FormVeterinario : Form
         LimpiarCamposConsulta();
     }
 
-    // 4. btnImprimirHistorial_Click: Validar paciente seleccionado, PrintDocument, reporte formal
     private void btnImprimirHistorial_Click(object sender, EventArgs e)
     {
         if (_mascotaSeleccionada == null)
@@ -278,8 +295,8 @@ public partial class FormVeterinario : Form
 
         Graphics g = e.Graphics;
         var mascota = _mascotaSeleccionada;
-        var dueno = _duenoSeleccionado ?? RepositorioDatos.Clientes.FirstOrDefault(c => c.Cedula == mascota.CedulaCliente);
-        var historial = RepositorioDatos.Consultas.Where(c => c.IdMascota == mascota.IdMascota).OrderByDescending(c => c.Fecha).ToList();
+        var dueno = _duenoSeleccionado ?? _clienteNegocio.ObtenerClientes().FirstOrDefault(c => c.Cedula.Trim().Equals(mascota.CedulaCliente.Trim(), StringComparison.OrdinalIgnoreCase));
+        var historial = _historialNegocio.ObtenerHistorialPorMascota(mascota.IdMascota);
 
         // Tipografías con liberación adecuada de recursos
         using var fontTitulo = new Font("Segoe UI", 18, FontStyle.Bold);
@@ -321,14 +338,19 @@ public partial class FormVeterinario : Form
         g.DrawString("FICHA TÉCNICA DEL PACIENTE", fontNegrita, brushTitulo, x + 15, y + 8);
 
         // Cálculo de edad aproximada
-        int anos = DateTime.Now.Year - mascota.FechaNacimiento.Year;
-        if (DateTime.Now.DayOfYear < mascota.FechaNacimiento.DayOfYear) anos--;
-        string edadTexto = anos > 0 ? $"{anos} año(s)" : "Menor de 1 año";
+        string edadTexto = "Menor de 1 año";
+        if (mascota.FechaNacimiento != DateTime.MinValue)
+        {
+            int anos = DateTime.Now.Year - mascota.FechaNacimiento.Year;
+            if (DateTime.Now.DayOfYear < mascota.FechaNacimiento.DayOfYear) anos--;
+            edadTexto = anos > 0 ? $"{anos} año(s)" : "Menor de 1 año";
+        }
 
         g.DrawString($"Nombre del Paciente: {mascota.Nombre} ({mascota.Sexo})", fontNegrita, brushTexto, x + 15, y + 32);
         g.DrawString($"Especie: {mascota.Especie}", fontTexto, brushTexto, x + 350, y + 32);
         g.DrawString($"Raza: {mascota.Raza}", fontTexto, brushTexto, x + 15, y + 54);
-        g.DrawString($"Edad Aprox.: {edadTexto} (Nac: {mascota.FechaNacimiento:dd/MM/yyyy})", fontTexto, brushTexto, x + 350, y + 54);
+        string fechaNacStr = mascota.FechaNacimiento != DateTime.MinValue ? mascota.FechaNacimiento.ToString("dd/MM/yyyy") : "N/D";
+        g.DrawString($"Edad Aprox.: {edadTexto} (Nac: {fechaNacStr})", fontTexto, brushTexto, x + 350, y + 54);
 
         string nomDueno = dueno != null ? $"{dueno.Nombres} {dueno.Apellidos}" : "N/D";
         string telDueno = dueno != null ? dueno.Telefono : "N/D";
@@ -339,7 +361,7 @@ public partial class FormVeterinario : Form
         // ÚLTIMO TRATAMIENTO / RECETA ACTUAL (si hay texto en pantalla o última consulta)
         string diagActual = !string.IsNullOrWhiteSpace(txtDiagnostico.Text) ? txtDiagnostico.Text.Trim() : (historial.FirstOrDefault()?.Diagnostico ?? "Sin registro");
         string tratActual = !string.IsNullOrWhiteSpace(txtTratamiento.Text) ? txtTratamiento.Text.Trim() : (historial.FirstOrDefault()?.Tratamiento ?? "Sin registro");
-        string obsActual = !string.IsNullOrWhiteSpace(txtObservaciones.Text) ? txtObservaciones.Text.Trim() : (historial.FirstOrDefault()?.Observaciones ?? "Ninguna");
+        string obsActual = !string.IsNullOrWhiteSpace(txtObservaciones.Text) ? txtObservaciones.Text.Trim() : "Ninguna";
 
         g.DrawString("TRATAMIENTO Y PRESCRIPCIÓN MÉDICA ACTUAL", fontSeccion, brushTitulo, x, y);
         y += 24;
@@ -361,9 +383,8 @@ public partial class FormVeterinario : Form
         g.FillRectangle(brushFondoHeaderTabla, x, y, anchoContenido, 25);
         g.DrawString("Fecha", fontNegrita, Brushes.White, x + 10, y + 4);
         g.DrawString("Peso", fontNegrita, Brushes.White, x + 95, y + 4);
-        g.DrawString("Temp.", fontNegrita, Brushes.White, x + 165, y + 4);
-        g.DrawString("Diagnóstico", fontNegrita, Brushes.White, x + 235, y + 4);
-        g.DrawString("Tratamiento Prescrito", fontNegrita, Brushes.White, x + 440, y + 4);
+        g.DrawString("Diagnóstico", fontNegrita, Brushes.White, x + 175, y + 4);
+        g.DrawString("Tratamiento Prescrito", fontNegrita, Brushes.White, x + 400, y + 4);
         y += 25;
 
         if (historial.Count == 0)
@@ -384,13 +405,12 @@ public partial class FormVeterinario : Form
 
                 g.DrawString(reg.Fecha.ToString("dd/MM/yyyy"), fontTexto, brushTexto, x + 10, y + 8);
                 g.DrawString(reg.Peso > 0 ? $"{reg.Peso:0.0} kg" : "-", fontTexto, brushTexto, x + 95, y + 8);
-                g.DrawString(reg.Temperatura > 0 ? $"{reg.Temperatura:0.0} °C" : "-", fontTexto, brushTexto, x + 165, y + 8);
 
-                string diagCorto = reg.Diagnostico.Length > 24 ? reg.Diagnostico[..21] + "..." : reg.Diagnostico;
-                g.DrawString(diagCorto, fontTexto, brushTexto, x + 235, y + 8);
+                string diagCorto = reg.Diagnostico.Length > 28 ? reg.Diagnostico[..25] + "..." : reg.Diagnostico;
+                g.DrawString(diagCorto, fontTexto, brushTexto, x + 175, y + 8);
 
-                string tratCorto = reg.Tratamiento.Length > 34 ? reg.Tratamiento[..31] + "..." : reg.Tratamiento;
-                g.DrawString(tratCorto, fontTexto, brushTexto, x + 440, y + 8);
+                string tratCorto = reg.Tratamiento.Length > 38 ? reg.Tratamiento[..35] + "..." : reg.Tratamiento;
+                g.DrawString(tratCorto, fontTexto, brushTexto, x + 400, y + 8);
 
                 y += 36;
             }
