@@ -7,6 +7,13 @@ public class ClienteNegocio
 {
     private readonly ClienteDatos _clienteDatos = new();
 
+    private static bool CedulaValida(string? cedula)
+    {
+        if (string.IsNullOrWhiteSpace(cedula)) return false;
+        string limpia = cedula.Trim();
+        return limpia.Length == 10 && limpia.All(char.IsDigit);
+    }
+
     // Metodo obtener
     public List<Cliente> ObtenerClientes()
     {
@@ -18,7 +25,7 @@ public class ClienteNegocio
     {
         mensajeErr = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(cliente.Cedula) || cliente.Cedula.Trim().Length != 10)
+        if (!CedulaValida(cliente.Cedula))
         {
             mensajeErr = "La cédula debe contener exactamente 10 digitos numéricos.";
             return false;
@@ -46,7 +53,7 @@ public class ClienteNegocio
     {
         mensajeErr = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(cliente.Cedula) || cliente.Cedula.Trim().Length != 10)
+        if (!CedulaValida(cliente.Cedula))
         {
             mensajeErr = "Debe seleccionar o especificar un cliente con cédula válida para modificar.";
             return false;
@@ -74,7 +81,7 @@ public class ClienteNegocio
     {
         mensajeErr = string.Empty;
 
-        if (string.IsNullOrWhiteSpace(cedula) || cedula.Trim().Length != 10)
+        if (!CedulaValida(cedula))
         {
             mensajeErr = "La cédula debe contener exactamente 10 dígitos numéricos.";
             return false;

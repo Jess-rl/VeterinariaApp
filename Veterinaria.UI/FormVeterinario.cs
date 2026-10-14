@@ -210,7 +210,12 @@ public partial class FormVeterinario : Form
         decimal peso = 0;
         if (!string.IsNullOrWhiteSpace(txtPeso.Text))
         {
-            decimal.TryParse(txtPeso.Text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out peso);
+            if (!decimal.TryParse(txtPeso.Text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out peso) || peso < 0)
+            {
+                MessageBox.Show("El peso debe ser un número válido y no negativo (ej. 12.5).", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtPeso.Focus();
+                return;
+            }
         }
 
         string tratamientoCompleto = txtTratamiento.Text.Trim();

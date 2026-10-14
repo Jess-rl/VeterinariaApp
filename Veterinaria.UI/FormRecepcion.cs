@@ -765,10 +765,13 @@ public partial class FormRecepcion : Form
             return;
         }
 
-        if (int.TryParse(dgvCitas.CurrentRow.Cells["IdCita"].Value?.ToString(), out int idCita))
+        if (!int.TryParse(dgvCitas.CurrentRow.Cells["IdCita"].Value?.ToString(), out int idCita))
         {
-            _citaSeleccionadaParaImprimir = _citaNegocio.ObtenerCitas().FirstOrDefault(c => c.IdCita == idCita);
+            MessageBox.Show("No se pudo identificar la cita seleccionada.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
         }
+
+        _citaSeleccionadaParaImprimir = _citaNegocio.ObtenerCitas().FirstOrDefault(c => c.IdCita == idCita);
 
         if (_citaSeleccionadaParaImprimir == null)
         {
