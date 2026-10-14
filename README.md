@@ -148,9 +148,15 @@ Módulo de atención médica:
 
 ## 🎓 Contexto académico
 
-Proyecto desarrollado en el semestre 5 como parte de la formación en desarrollo de software, aplicando:
+Proyecto grupal desarrollado en el 5.º semestre como parte de la formación en desarrollo de software, aplicando:
 
 - Arquitectura en capas
 - Patrón Repository
 - SQL relacional con integridad referencial
 - Descripción de interfaces en Windows Forms
+
+---
+
+## 📄 Licencia
+
+Este proyecto es de uso académico. Para más información, contacta al autor.
