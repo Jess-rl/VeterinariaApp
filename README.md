@@ -105,43 +105,6 @@ VeterinariaApp/
 
 ---
 
-## 🚀 Instalación y ejecución
-
-### Requisitos
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [PostgreSQL 18](https://www.postgresql.org/download/)
-- Windows (necesario para Windows Forms)
-
-### Pasos
-
-1. **Clonar el repositorio**
-
-   ```bash
-   git clone https://github.com/Jess-rl/VeterinariaApp.git
-   cd VeterinariaApp
-   ```
-
-2. **Crear la base de datos y cargar el esquema**
-
-   ```bash
-   createdb db_veterinaria
-   psql -d db_veterinaria -f Scripts/schema.sql
-   ```
-
-3. **Configurar la conexión**
-
-   Ajusta las credenciales en `Veterinaria.Datos/ConexionBD.cs` según tu entorno local.
-
-4. **Compilar y ejecutar**
-
-   ```bash
-   dotnet build
-   dotnet run --project Veterinaria.UI
-   ```
-
----
-
 ## 📱 Módulos de la aplicación
 
 ### FormInicio
@@ -191,13 +154,3 @@ Proyecto desarrollado en el semestre 5 como parte de la formación en desarrollo
 - Patrón Repository
 - SQL relacional con integridad referencial
 - Descripción de interfaces en Windows Forms
-
----
-
-## 📄 Licencia
-
-Este proyecto es de uso académico. Para más información, contacta al autor.
-
----
-
-Hecho con 💜 en C# y PostgreSQL.
