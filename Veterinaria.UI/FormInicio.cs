@@ -1,7 +1,12 @@
+using Veterinaria.Entidades;
+using Veterinaria.Negocio;
+
 namespace Veterinaria.UI;
 
 public partial class FormInicio : Form
 {
+    private readonly EmpleadoNegocio _empleadoNegocio = new();
+
     public FormInicio()
     {
         InitializeComponent();
@@ -22,13 +27,16 @@ public partial class FormInicio : Form
 
     private void btnVeterinario_Click(object sender, EventArgs e)
     {
-        FormPin formPin = new FormPin();
+        using var formPin = new FormPin();
 
-        if (formPin.ShowDialog() == DialogResult.OK)
+        if (formPin.ShowDialog() != DialogResult.OK)
         {
-            string pin = formPin.PinIngresado;
+            return;
+        }
 
-            if (pin == "1234")
+        try
+        {
+            if (_empleadoNegocio.ValidarPin(formPin.PinIngresado, out Empleado? empleado, out string mensajeErr))
             {
                 FormVeterinario veterinario = new FormVeterinario();
                 this.Hide();
@@ -37,9 +45,13 @@ public partial class FormInicio : Form
             }
             else
             {
-                MessageBox.Show("PIN de acceso incorrecto.", "Acceso denegado");
+                MessageBox.Show(mensajeErr, "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
-
+        catch (Exception ex)
+        {
+            MessageBox.Show("No se pudo validar el PIN contra la base de datos: " + ex.Message,
+                "Error de conexión", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 }

@@ -7,27 +7,30 @@ public class EmpleadoNegocio
 {
     private readonly EmpleadoDatos _empleadoDatos = new();
 
-    public bool ValidarPin(string pin, out Empleado? empleado)
+    /// <summary>
+    /// Valida el PIN de acceso contra la base de datos.
+    /// Los errores de conexión se propagan para que la capa de presentación
+    /// los informe; no existe ninguna clave de respaldo en el código.
+    /// </summary>
+    public bool ValidarPin(string pin, out Empleado? empleado, out string mensajeErr)
     {
         empleado = null;
-        if (string.IsNullOrWhiteSpace(pin)) return false;
+        mensajeErr = string.Empty;
 
-        try
+        if (string.IsNullOrWhiteSpace(pin))
         {
-            empleado = _empleadoDatos.ValidarPin(pin);
-            if (empleado != null) return true;
-        }
-        catch
-        {
-            // Fallback para clave de emergencia
+            mensajeErr = "Debe ingresar un PIN de acceso.";
+            return false;
         }
 
-        if (pin.Trim() == "1234")
+        empleado = _empleadoDatos.ValidarPin(pin);
+
+        if (empleado is null)
         {
-            empleado = new Empleado(1, "Dr. Fernando Morales", "ADMIN", "1234");
-            return true;
+            mensajeErr = "PIN de acceso incorrecto.";
+            return false;
         }
 
-        return false;
+        return true;
     }
 }
