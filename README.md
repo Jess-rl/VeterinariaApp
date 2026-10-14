@@ -13,7 +13,8 @@ Sistema de gestión integral para clínicas veterinarias desarrollado como **pro
 - **Gestión de citas:** agendamiento, cancelación y atención; filtros por estado (`PENDIENTE`, `ATENDIDA`, `CANCELADA`).
 - **Historial clínico:** registro de peso, temperatura, diagnóstico, tratamiento y observaciones por consulta.
 - **Impresión:** comprobantes de cita y reportes de historial médico con vista previa.
-- **Control de acceso:** módulo veterinario protegido por PIN con roles (`ADMIN` / `PERSONAL`).
+- **Control de acceso:** módulo veterinario protegido por PIN validado **contra la base de datos** (`EmpleadoDatos.ValidarPin`), con roles (`ADMIN` / `PERSONAL`).
+- **Configuración externa:** la cadena de conexión vive en `appsettings.json`, no en el código, por lo que puede cambiarse sin recompilar.
 
 ---
 
@@ -55,6 +56,7 @@ Proyecto estructurado en **cuatro capas** con dependencias unidireccionales:
 - **Patrón Repository:** cada entidad tiene su clase de acceso a datos (`ClienteDatos`, `MascotaDatos`, `CitaDatos`, `HistorialClinicoDatos`, `EmpleadoDatos`).
 - **SQL parametrizado** en todas las operaciones para prevenir inyección SQL.
 - **Integridad referencial** en base de datos: claves foráneas con `ON DELETE CASCADE` y restricciones `CHECK` para estados, roles y sexo.
+- **Credenciales desacopladas:** `Program.CargarConfiguracion()` lee `Veterinaria.UI/appsettings.json` al iniciar y entrega la cadena de conexión a `ConexionBD.CadenaConexion`. La capa de datos no contiene credenciales.
 
 ---
 
@@ -63,7 +65,8 @@ Proyecto estructurado en **cuatro capas** con dependencias unidireccionales:
 ```
 VeterinariaApp/
 ├── Scripts/
-│   └── schema.sql                  # Esquema de la base de datos
+│   ├── schema.sql                  # Esquema de la base de datos
+│   └── seed.sql                    # Datos iniciales (empleado por defecto)
 ├── Veterinaria.Entidades/          # Modelos del dominio
 │   ├── Cliente.cs
 │   ├── Mascota.cs
@@ -85,6 +88,8 @@ VeterinariaApp/
 │   └── HistorialClinicoNegocio.cs
 └── Veterinaria.UI/                 # Interfaz gráfica (WinForms)
     ├── Program.cs
+    ├── appsettings.json            # Cadena de conexión (local)
+    ├── appsettings.example.json    # Plantilla de configuración
     ├── FormInicio.cs               # Menú principal
     ├── FormPin.cs                  # Acceso por PIN
     ├── FormRecepcion.cs            # Módulo de recepción
@@ -132,16 +137,35 @@ Módulo de atención médica:
 | `ADMIN` | Acceso completo al sistema |
 | `PERSONAL` | Acceso a módulos operativos |
 
-> El acceso al módulo veterinario se realiza mediante PIN. El PIN por defecto es `1234`.
+> El acceso al módulo veterinario se valida contra la tabla `empleado` (consulta parametrizada por `clave_pin`). Al ejecutar `Scripts/seed.sql` se crea un empleado `ADMIN` con PIN `1234`, de demostración académica.
+
+---
+
+## ⚙️ Puesta en marcha
+
+1. **Crear la base de datos y el esquema:**
+   ```bash
+   createdb db_veterinaria
+   psql -d db_veterinaria -f Scripts/schema.sql
+   psql -d db_veterinaria -f Scripts/seed.sql   # empleado por defecto
+   ```
+2. **Configurar la conexión:** copiar `Veterinaria.UI/appsettings.example.json` como `Veterinaria.UI/appsettings.json` y ajustar host, puerto, base de datos, usuario y contraseña.
+3. **Compilar y ejecutar:**
+   ```bash
+   dotnet run --project Veterinaria.UI
+   ```
+
+> `Scripts/seed.sql` es necesario porque las citas y el historial referencian un `id_empleado`; sin al menos un empleado registrado, las altas fallarían por clave foránea.
 
 ---
 
 ## 📋 Próximos pasos (mejoras previstas)
 
-- [ ] Autenticación real contra la base de datos (empleados y roles).
-- [ ] Migración de base de datos con scripts versionados.
+- [ ] Migración de base de datos con scripts versionados (hoy es un volcado de `pg_dump`).
 - [ ] Separar temperatura y observaciones en columnas propias del historial.
+- [ ] Inyectar dependencias en la capa de negocio para poder probarla.
 - [ ] Agregar pruebas unitarias para la capa de negocio.
+- [ ] Cifrar el almacenamiento de los PIN de empleados.
 - [ ] Dashboard con reportes y estadísticas.
 
 ---
